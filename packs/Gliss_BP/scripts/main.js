@@ -118,6 +118,8 @@ let announced = false;
  * @property {number} measuredSpeed  zuletzt gemessene tatsächliche Geschwindigkeit (Blöcke/Tick)
  * @property {number} displaySpeed   geglättete gemessene Geschwindigkeit für die Anzeige
  * @property {number} groundY        Höhe der Gliss-Oberfläche, auf der die Entity zuletzt stand
+ * @property {{x:number,z:number}|null} anchor  Mobs/Gegenstände: zuletzt gesetzte Position – jeder Tick
+ *                                   setzt „Anker + Rutschbewegung“, KI-Schritte dazwischen werden verworfen
  * @property {boolean} canFly        Mob kann fliegen/schweben – darf vom Gliss abheben
  */
 
@@ -297,6 +299,7 @@ function startSliding(entity, isPlayer, d) {
     measuredSpeed: Math.hypot(d.x, d.z),
     displaySpeed: Math.hypot(d.x, d.z),
     groundY: entity.location.y,
+    anchor: isPlayer ? null : { x: entity.location.x, z: entity.location.z },
     canFly: !isPlayer && FLYING_NAV.some((c) => {
       try {
         return entity.hasComponent(c);
@@ -479,12 +482,32 @@ function tryMove(entity, loc, dx, dz) {
  * RESTITUTION zurückgeworfen), der freie Anteil rutscht weiter.
  */
 function tickSlideEntity(st, loc) {
-  if (Math.hypot(st.vx, st.vz) <= CONFIG.STUCK_SPEED) return;
   const e = st.entity;
-  if (tryMove(e, loc, st.vx, st.vz)) return;
-  if (Math.abs(st.vx) > 1e-4 && !tryMove(e, loc, st.vx, 0)) st.vx = -st.vx * CONFIG.RESTITUTION;
-  const loc2 = e.location;
-  if (Math.abs(st.vz) > 1e-4 && !tryMove(e, loc2, 0, st.vz)) st.vz = -st.vz * CONFIG.RESTITUTION;
+  if (!st.anchor) st.anchor = { x: loc.x, z: loc.z };
+  // Ausgangspunkt ist der Anker, nicht die aktuelle Position: Was die KI seit dem letzten
+  // Tick gelaufen ist, zählt nicht – auf Gliss gibt es nichts, wovon man sich abstoßen könnte.
+  const base = { x: st.anchor.x, y: loc.y, z: st.anchor.z };
+  if (Math.hypot(st.vx, st.vz) <= CONFIG.STUCK_SPEED) {
+    // Stillstand: nur festnageln, wenn die Entity sich wegbewegt hat
+    if (Math.abs(loc.x - base.x) > 1e-3 || Math.abs(loc.z - base.z) > 1e-3) tryMove(e, base, 0, 0);
+    return;
+  }
+  if (tryMove(e, base, st.vx, st.vz)) {
+    st.anchor = { x: base.x + st.vx, z: base.z + st.vz };
+    return;
+  }
+  let nx = base.x, nz = base.z;
+  if (Math.abs(st.vx) > 1e-4) {
+    if (tryMove(e, base, st.vx, 0)) nx = base.x + st.vx;
+    else st.vx = -st.vx * CONFIG.RESTITUTION;
+  }
+  const base2 = { x: nx, y: loc.y, z: base.z };
+  if (Math.abs(st.vz) > 1e-4) {
+    if (tryMove(e, base2, 0, st.vz)) nz = base.z + st.vz;
+    else st.vz = -st.vz * CONFIG.RESTITUTION;
+  }
+  if (nx === base.x && nz === base.z) tryMove(e, base, 0, 0); // ganz blockiert: festnageln
+  st.anchor = { x: nx, z: nz };
 }
 
 function hasTag(player, tag) {
@@ -559,14 +582,17 @@ function updateEntity(entity, isPlayer) {
     if (!isPlayer && !st.canFly && loc.y > st.groundY + 0.01 && loc.y < st.groundY + 1.6) {
       const below = groundBelow(entity, { x: loc.x, y: st.groundY, z: loc.z }, halfWidth(entity, false));
       if (below.anyGliss && !below.centerSolid) {
-        const floor = { x: loc.x, y: st.groundY, z: loc.z };
-        if (!tryMove(entity, floor, st.vx, st.vz)) tryMove(entity, floor, 0, 0);
+        const a = st.anchor ?? { x: loc.x, z: loc.z };
+        const floor = { x: a.x, y: st.groundY, z: a.z };
+        if (tryMove(entity, floor, st.vx, st.vz)) st.anchor = { x: a.x + st.vx, z: a.z + st.vz };
+        else tryMove(entity, floor, 0, 0);
         return;
       }
     }
     // In der Luft (Kante hinunter, Schubs): Der Impuls bleibt erhalten,
     // die Geschwindigkeit wird beim nächsten Bodenkontakt wieder angelegt.
     st.airborne = true;
+    st.anchor = null;
     st.grace = Math.max(st.grace, 2);
     updateHud(st);
     return;
