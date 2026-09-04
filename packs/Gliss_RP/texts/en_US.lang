@@ -1,6 +1,7 @@
 pack.name=Gliss – Resources
 pack.description=Texture and texts for the Gliss block (after Andreas Eschbach).
 tile.gliss:gliss_block.name=Gliss Block
+item.gliss:laser.name=Gliss Laser
 gliss.hud=§b◆ GLISS ◆§r  %s m/s   §7no friction · no steering · no braking§r
 gliss.hud.stuck=§b◆ GLISS ◆§r  §cStuck!§r   §7Throw something away (Q) – recoil gets you moving§r
 gliss.hud.air=§b◆ GLISS ◆§r  %s m/s   §7airborne – momentum is kept§r
@@ -8,6 +9,6 @@ gliss.msg.enter=§b[Gliss]§r You are on Gliss – no friction! You can neither 
 gliss.msg.exit=§b[Gliss]§r Solid ground – you are back in control.
 gliss.msg.recoil=§b[Gliss]§r Recoil! Conservation of momentum: you glide the opposite way.
 gliss.msg.bounce=§b[Gliss]§r Impact – you bounce off.
-gliss.msg.stuck=§b[Gliss]§r You are stuck, just like in the novel: without friction there is nothing to push against. Throw items away (Q), shoot a bow, get pushed – or mine the block under you.
+gliss.msg.stuck=§b[Gliss]§r You are stuck, just like in the novel: without friction there is nothing to push against. Throw items away (Q), shoot a bow, get pushed – or cut the block under you with the Gliss laser.
 gliss.msg.loaded=§b[Gliss]§r Add-on active. Get the block: creative inventory (search "Gliss") or /give @s gliss:gliss_block 64
 gliss.msg.web=§b[Gliss]§r Cobweb – you have grip and control again.

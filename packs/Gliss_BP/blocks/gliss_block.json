@@ -19,11 +19,9 @@
       },
       "minecraft:friction": 0.0,
       "minecraft:destructible_by_mining": {
-        "seconds_to_destroy": 2.0
+        "seconds_to_destroy": 1500.0
       },
-      "minecraft:destructible_by_explosion": {
-        "explosion_resistance": 30
-      },
+      "minecraft:destructible_by_explosion": false,
       "minecraft:map_color": "#B9DCEC",
       "minecraft:light_emission": 3,
       "minecraft:redstone_conductivity": {

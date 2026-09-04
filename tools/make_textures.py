@@ -97,7 +97,40 @@ def make_icon(path, size=128):
     write_png(path, size, size, rows)
 
 
+LASER_SPRITE = [
+    "................",
+    "............rr..",
+    "...........rcc..",
+    "..........gggc..",
+    ".........gGgg...",
+    "........gGgg....",
+    ".......gGgg.....",
+    "......gGgg......",
+    ".....gGgg.......",
+    "....gGgg........",
+    "...dGg..........",
+    "..ddd...........",
+    ".ddd............",
+    ".dd.............",
+    "................",
+    "................",
+]
+LASER_COLORS = {
+    "g": (96, 104, 112, 255),    # Gehäuse
+    "G": (150, 160, 170, 255),   # Glanzkante
+    "d": (58, 42, 30, 255),      # Griff
+    "c": (120, 235, 255, 255),   # Linse
+    "r": (255, 70, 60, 255),     # Emitter/Strahl
+}
+
+
+def make_laser(path):
+    rows = [[LASER_COLORS.get(ch, (0, 0, 0, 0)) for ch in line] for line in LASER_SPRITE]
+    write_png(path, 16, 16, rows)
+
+
 if __name__ == "__main__":
+    make_laser(os.path.join(ROOT, "packs", "Gliss_RP", "textures", "items", "gliss_laser.png"))
     make_block(os.path.join(ROOT, "packs", "Gliss_RP", "textures", "blocks", "gliss_block.png"))
     make_icon(os.path.join(ROOT, "packs", "Gliss_RP", "pack_icon.png"))
     make_icon(os.path.join(ROOT, "packs", "Gliss_BP", "pack_icon.png"))

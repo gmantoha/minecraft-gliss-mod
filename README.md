@@ -9,8 +9,8 @@ Stöße, Wände oder festen Boden wieder davon.
 **Fertige Datei:** `dist/Gliss.mcaddon` (mit `./build.sh` neu erzeugen).
 
 ```
-packs/Gliss_BP/          Verhaltenspaket: Blockdefinition, Rezept, Skript (Physik)
-packs/Gliss_RP/          Ressourcenpaket: Textur, Blocksound, Texte (de/en)
+packs/Gliss_BP/          Verhaltenspaket: Block, Gliss-Laser, Rezepte, Skript (Physik)
+packs/Gliss_RP/          Ressourcenpaket: Texturen, Blocksound, Texte (de/en)
 tools/make_textures.py   erzeugt Textur und Pack-Icons (ohne Zusatzbibliotheken)
 tools/sim/               Offline-Simulation der Rutsch-Logik (Node.js, ohne Minecraft)
 build.sh                 prüft JSON/JS, baut dist/Gliss.mcaddon und die .mcpack-Dateien
@@ -76,7 +76,11 @@ Eis 0,98, Blaueis 0,989. Der Gliss-Block ist auf 1,0 gesetzt – keine Abnahme d
 
 **Block** (`packs/Gliss_BP/blocks/gliss_block.json`): ein normaler Vollblock mit
 `"minecraft:friction": 0.0` und `"minecraft:redstone_conductivity"` (eigene Blöcke leiten in Bedrock
-sonst kein Redstone-Signal). In Bedrock reicht dieser Wert von 0,0 (glatter als Eis, das 0,02 hat) bis
+sonst kein Redstone-Signal). Er ist explosionsfest (`destructible_by_explosion: false`) und mit
+1500 Sekunden Abbauzeit für normales Werkzeug praktisch unzerstörbar. Der **Gliss-Laser**
+(`items/laser.json`) ist das einzige Werkzeug, das ihn zerlegt: ein `minecraft:digger` mit
+Abbaugeschwindigkeit 500 allein für diesen Block. Das entspricht dem Roman, in dem Gliss nur mit
+Lasern bearbeitet werden kann. In Bedrock reicht dieser Wert von 0,0 (glatter als Eis, das 0,02 hat) bis
 0,9; er entspricht 1 − Rutschigkeit. Damit rutschen Gegenstände und Mobs schon ohne Skript endlos.
 Für Spieler reicht das nicht, weil die Spielfigur weiterhin selbst beschleunigen könnte und weil
 Minecraft die Steuerung nie ganz abgibt.

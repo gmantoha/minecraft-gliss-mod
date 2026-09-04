@@ -46,10 +46,24 @@ Eine bestehende Welt: im Weltenmenü auf den **Stift** (Bearbeiten) und die Pake
 - Mit Cheats: `/give @s gliss:gliss_block 64`
 - Überleben: **8 Eis + 1 Schleimball** in der Werkbank (Eis ringsum, Schleimball in die Mitte) ergeben 8 Gliss-Blöcke.
 
+**Gliss wieder entfernen.** Wie im Roman lässt sich Gliss weder sprengen noch mit normalem Werkzeug
+bearbeiten: TNT, Creeper und Feuerbälle richten nichts aus, von Hand oder mit Spitzhacke dauert ein Block
+25 Minuten. Das einzige Werkzeug ist der **Gliss-Laser** (ein Block in etwa 3 Sekunden, 512 Einsätze):
+
+```
+[ ] [Glas]           [Diamant]
+[Redstone-Block] [Glas]  [ ]
+[Eisenbarren] [ ]        [ ]
+```
+
+Im Kreativ-Inventar unter „Ausrüstung“ oder mit `/give @s gliss:laser`. Im Kreativmodus bricht man jeden
+Block ohnehin sofort.
+
 ## 5. So spielt sich Gliss
 
 | Situation | Was passiert |
 |---|---|
+| Du willst Gliss sprengen oder abbauen | Explosionen prallen wirkungslos ab, Werkzeuge greifen nicht. Nur der Gliss-Laser zerlegt den Block (siehe oben). |
 | Du gehst/rennst auf Gliss | Du behältst dein Tempo und rutschst geradeaus weiter. Laufen und Springen sind in jedem Spielmodus gesperrt, die Kamera bleibt frei. Oben im Bildschirm siehst du dein Tempo in m/s. |
 | Du stehst still auf Gliss (z. B. Block unter dir gesetzt) | Du hängst fest – wie im Roman. Nach 3 s kommt ein Hinweis. |
 | Du wirfst etwas weg (Taste **Q**) oder schießt (Bogen, Schneeball, Dreizack) | **Rückstoß**: Du gleitest in die Gegenrichtung deines Blicks. Mehrfach werfen = schneller. So steuert man auf Gliss. Aus dem Stand macht der Abstoß einen kleinen Hüpfer. |
@@ -58,7 +72,7 @@ Eine bestehende Welt: im Weltenmenü auf den **Stift** (Bearbeiten) und die Pake
 | Du rutschst in ein Spinnennetz | Du hältst komplett an und hast im Netz wieder Kontrolle. Spinnennetze sind die „Barrikaden“ aus dem Roman: Damit sicherst du Ränder und baust Haltepunkte. |
 | Du rutschst auf festen Boden, ins Wasser oder fällst von der Kante | Fester Boden hat Reibung: Du stoppst und hast wieder Kontrolle. In der Luft bleibt dein Impuls erhalten. |
 | Tiere, Monster oder Gegenstände geraten auf Gliss | Sie rutschen endlos geradeaus weiter, bleiben an Wänden stehen und werden von Spinnennetzen gestoppt. Genau wie im Roman kommt Fracht, die man anschubst, irgendwann drüben an. |
-| Kreativmodus | Auch hier ist Springen (und damit das Losfliegen) gesperrt. Notausgang in jedem Modus: den Block unter dir abbauen, ein Spinnennetz setzen oder `/gamemode spectator`. Wer schon fliegt, rutscht nicht. |
+| Kreativmodus | Auch hier ist Springen (und damit das Losfliegen) gesperrt. Notausgang: den Block unter dir mit dem Gliss-Laser zerlegen (im Kreativmodus reicht die Hand), ein Spinnennetz setzen oder `/gamemode spectator`. Wer schon fliegt, rutscht nicht. |
 
 **Bauideen**
 

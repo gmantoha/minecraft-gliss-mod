@@ -1,0 +1,9 @@
+{
+  "resource_pack_name": "gliss",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "gliss_laser": {
+      "textures": "textures/items/gliss_laser"
+    }
+  }
+}

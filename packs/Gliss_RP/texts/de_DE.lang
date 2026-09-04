@@ -1,6 +1,7 @@
 pack.name=Gliss – Ressourcen
 pack.description=Textur und Texte für den Gliss-Block (nach Andreas Eschbach).
 tile.gliss:gliss_block.name=Gliss-Block
+item.gliss:laser.name=Gliss-Laser
 gliss.hud=§b◆ GLISS ◆§r  %s m/s   §7keine Reibung · kein Lenken · kein Bremsen§r
 gliss.hud.stuck=§b◆ GLISS ◆§r  §cFestgefahren!§r   §7Wirf etwas weg (Q) – Rückstoß bringt dich in Fahrt§r
 gliss.hud.air=§b◆ GLISS ◆§r  %s m/s   §7in der Luft – der Impuls bleibt§r
@@ -8,6 +9,6 @@ gliss.msg.enter=§b[Gliss]§r Du bist auf Gliss – keine Reibung! Du kannst wed
 gliss.msg.exit=§b[Gliss]§r Fester Boden – du hast wieder Kontrolle.
 gliss.msg.recoil=§b[Gliss]§r Rückstoß! Impulserhaltung: Du gleitest in die Gegenrichtung.
 gliss.msg.bounce=§b[Gliss]§r Aufprall – du prallst ab.
-gliss.msg.stuck=§b[Gliss]§r Du hängst fest wie im Roman: Ohne Reibung gibt es nichts zum Abstoßen. Wirf Gegenstände weg (Q), schieße mit dem Bogen, lass dich anschubsen – oder baue den Block unter dir ab.
+gliss.msg.stuck=§b[Gliss]§r Du hängst fest wie im Roman: Ohne Reibung gibt es nichts zum Abstoßen. Wirf Gegenstände weg (Q), schieße mit dem Bogen, lass dich anschubsen – oder zerlege den Block unter dir mit dem Gliss-Laser.
 gliss.msg.loaded=§b[Gliss]§r Add-On aktiv. Block holen: Kreativ-Inventar (Suche „Gliss“) oder /give @s gliss:gliss_block 64
 gliss.msg.web=§b[Gliss]§r Spinnennetz – du hast wieder Halt und Kontrolle.
