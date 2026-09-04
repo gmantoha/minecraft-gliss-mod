@@ -97,35 +97,77 @@ def make_icon(path, size=128):
     write_png(path, size, size, rows)
 
 
-LASER_SPRITE = [
-    "................",
-    "............rr..",
-    "...........rcc..",
-    "..........gggc..",
-    ".........gGgg...",
-    "........gGgg....",
-    ".......gGgg.....",
-    "......gGgg......",
-    ".....gGgg.......",
-    "....gGgg........",
-    "...dGg..........",
-    "..ddd...........",
-    ".ddd............",
-    ".dd.............",
-    "................",
-    "................",
-]
+# Farben des Laser-Icons. Kräftige Töne und ein dunkler Umriss wie bei Vanilla-Werkzeugen,
+# damit das Symbol auf der dunklen Hotbar und im grauen Inventar sofort ins Auge fällt.
 LASER_COLORS = {
-    "g": (96, 104, 112, 255),    # Gehäuse
-    "G": (150, 160, 170, 255),   # Glanzkante
-    "d": (58, 42, 30, 255),      # Griff
-    "c": (120, 235, 255, 255),   # Linse
-    "r": (255, 70, 60, 255),     # Emitter/Strahl
+    "o": (22, 24, 30, 255),      # Umriss
+    "b": (172, 182, 196, 255),   # Gehäuse
+    "B": (228, 234, 242, 255),   # Gehäuse, Lichtkante
+    "s": (104, 114, 130, 255),   # Gehäuse, Schatten
+    "n": (58, 62, 72, 255),      # Ringe / Griffabschluss
+    "h": (84, 58, 40, 255),      # Griff
+    "H": (128, 92, 64, 255),     # Griff, Lichtkante
+    "k": (52, 36, 24, 255),      # Griff, Schatten
+    "c": (110, 232, 255, 255),   # Linse
+    "C": (214, 252, 255, 255),   # Linse, Glanz
+    "y": (255, 204, 48, 255),    # Auslöser
+    "r": (255, 56, 48, 255),     # Emitter
+    "R": (255, 132, 108, 255),   # Strahl, hell
+    "p": (255, 72, 60, 150),     # Strahl, Schein
 }
 
 
+def laser_sprite(size=16):
+    """Zeichnet den Laser als diagonales Werkzeug (Griff unten links, Strahl oben rechts).
+
+    Gearbeitet wird in Diagonalkoordinaten: s = x + y liegt quer zum Werkzeug (Breite),
+    t = x - y läuft am Werkzeug entlang (vom Griff zur Spitze)."""
+    grid = [["." for _ in range(size)] for _ in range(size)]
+
+    def body_char(s, t):
+        if t <= -6:                       # Griff
+            if t == -12:
+                return "n"
+            return "H" if s == 13 else ("k" if s == 16 else "h")
+        if t in (-5, 6):                  # Ringe zwischen Griff, Gehäuse und Linse
+            return "n"
+        if t <= 5:                        # Gehäuse
+            if t == 0 and s == 13:
+                return "y"
+            return "B" if s == 13 else ("s" if s == 16 else "b")
+        if t <= 9:                        # Linse
+            return "C" if s == 13 else "c"
+        return "r"                        # Emitter
+
+    for y in range(size):
+        for x in range(size):
+            s, t = x + y, x - y
+            if 13 <= s <= 16 and -12 <= t <= 10:
+                grid[y][x] = body_char(s, t)
+    # Umriss: alle leeren Nachbarn (4er-Nachbarschaft) des Körpers
+    for y in range(size):
+        for x in range(size):
+            if grid[y][x] != ".":
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < size and 0 <= ny < size and grid[ny][nx] not in (".", "o"):
+                    grid[y][x] = "o"
+                    break
+    # Strahl aus dem Emitter bis in die Ecke, mit Lichtschein daneben
+    for y in range(size):
+        for x in range(size):
+            s, t = x + y, x - y
+            if t >= 11:
+                if s in (14, 15):
+                    grid[y][x] = "R" if t <= 12 else "r"
+                elif s in (13, 16) and grid[y][x] == ".":
+                    grid[y][x] = "p"
+    return ["".join(row) for row in grid]
+
+
 def make_laser(path):
-    rows = [[LASER_COLORS.get(ch, (0, 0, 0, 0)) for ch in line] for line in LASER_SPRITE]
+    rows = [[LASER_COLORS.get(ch, (0, 0, 0, 0)) for ch in line] for line in laser_sprite()]
     write_png(path, 16, 16, rows)
 
 

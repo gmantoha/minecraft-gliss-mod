@@ -4,20 +4,20 @@
     "name": "pack.name",
     "description": "pack.description",
     "uuid": "1c39703c-1613-4d4d-af6b-3b3b94d8b7ff",
-    "version": [1, 6, 1],
+    "version": [1, 6, 2],
     "min_engine_version": [1, 21, 90]
   },
   "modules": [
     {
       "type": "data",
       "uuid": "d082d52e-5d40-4219-931a-d6cd0eb99461",
-      "version": [1, 6, 1]
+      "version": [1, 6, 2]
     },
     {
       "type": "script",
       "language": "javascript",
       "uuid": "c9e9aea8-97af-407d-91c5-cf852db06c38",
-      "version": [1, 6, 1],
+      "version": [1, 6, 2],
       "entry": "scripts/main.js"
     }
   ],
@@ -28,7 +28,7 @@
     },
     {
       "uuid": "3d7cb0bb-5b4b-4b05-862d-f2dd1c52045c",
-      "version": [1, 6, 1]
+      "version": [1, 6, 2]
     }
   ],
   "metadata": {
