@@ -109,7 +109,8 @@ Minecraft die Steuerung nie ganz abgibt.
 7. Gegenstände und Mobs in Spielernähe werden pro Tick per `tryTeleport` um ihre gespeicherte
    Geschwindigkeit versetzt. Über die Geschwindigkeit ginge das nicht: Minecraft dämpft sie am Boden jeden
    Tick um 9 % (Mobs) bzw. 2 % (Gegenstände), selbst bei Rutschigkeit 1,0. Steht ein Block im Weg, wird der
-   blockierte Anteil gestoppt, der freie rutscht weiter.
+   blockierte Anteil gestoppt, der freie rutscht weiter. Springt ein Mob (KI, Hindernis), wird er im
+   selben Tick auf die Gliss-Oberfläche zurückgesetzt; nur Mobs mit Flug- oder Schwebe-Navigation dürfen abheben.
 
 **Selbstkalibrierung.** Die Dokumentation legt nicht fest, ob `applyKnockback` die Geschwindigkeit
 *setzt*, *halbiert und addiert* (wie Vanilla-Knockback) oder *addiert*. Das Skript misst deshalb

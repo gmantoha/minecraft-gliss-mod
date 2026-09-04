@@ -71,7 +71,7 @@ Block ohnehin sofort.
 | Du rutschst frontal gegen eine Wand | Du bleibst stehen (unelastischer Stoß) und hängst fest, bis du Rückstoß erzeugst. Triffst du die Wand schräg, rutschst du an ihr entlang weiter. |
 | Du rutschst in ein Spinnennetz | Du hältst komplett an und hast im Netz wieder Kontrolle. Spinnennetze sind die „Barrikaden“ aus dem Roman: Damit sicherst du Ränder und baust Haltepunkte. |
 | Du rutschst auf festen Boden, ins Wasser oder fällst von der Kante | Fester Boden hat Reibung: Du stoppst und hast wieder Kontrolle. In der Luft bleibt dein Impuls erhalten. |
-| Tiere, Monster oder Gegenstände geraten auf Gliss | Sie rutschen endlos geradeaus weiter, bleiben an Wänden stehen und werden von Spinnennetzen gestoppt. Genau wie im Roman kommt Fracht, die man anschubst, irgendwann drüben an. |
+| Tiere, Monster oder Gegenstände geraten auf Gliss | Sie rutschen endlos geradeaus weiter, können nicht springen, bleiben an Wänden stehen und werden von Spinnennetzen gestoppt. Nur flugfähige Tiere (Bienen, Fledermäuse) dürfen abheben. Genau wie im Roman kommt Fracht, die man anschubst, irgendwann drüben an. |
 | Kreativmodus | Auch hier ist Springen (und damit das Losfliegen) gesperrt. Notausgang: den Block unter dir mit dem Gliss-Laser zerlegen (im Kreativmodus reicht die Hand), ein Spinnennetz setzen oder `/gamemode spectator`. Wer schon fliegt, rutscht nicht. |
 
 **Bauideen**

@@ -114,6 +114,8 @@ let announced = false;
  * @property {boolean} forceApply    nächste Korrektur sofort (Eintritt, Abprall, Impuls)
  * @property {boolean} kick          nächste Korrektur mit kleinem Hüpfer (Abstoßen aus dem Stand)
  * @property {number} measuredSpeed  zuletzt gemessene tatsächliche Geschwindigkeit (Blöcke/Tick)
+ * @property {number} groundY        Höhe der Gliss-Oberfläche, auf der die Entity zuletzt stand
+ * @property {boolean} canFly        Mob kann fliegen/schweben – darf vom Gliss abheben
  */
 
 // ---------------------------------------------------------------- Hilfsfunktionen
@@ -266,6 +268,8 @@ function applyVelocity(entity, isPlayer, fx, fz, fy = 0) {
 }
 
 // ---------------------------------------------------------------- Rutsch-Logik
+const FLYING_NAV = ["minecraft:navigation.fly", "minecraft:navigation.hover", "minecraft:navigation.float"];
+
 function startSliding(entity, isPlayer, d) {
   /** @type {SlideState} */
   const st = {
@@ -287,6 +291,14 @@ function startSliding(entity, isPlayer, d) {
     forceApply: true,
     kick: false,
     measuredSpeed: Math.hypot(d.x, d.z),
+    groundY: entity.location.y,
+    canFly: !isPlayer && FLYING_NAV.some((c) => {
+      try {
+        return entity.hasComponent(c);
+      } catch {
+        return false;
+      }
+    }),
   };
   capSpeed(st);
   sliders.set(entity.id, st);
@@ -504,6 +516,17 @@ function updateEntity(entity, isPlayer) {
   if (grounded && !onGliss) return stopSliding(st, "ground");
 
   if (!grounded) {
+    // Mobs springen (KI, Hindernisse). Auf Gliss gibt es nichts, wovon man sich abstoßen
+    // könnte: Wer über Gliss abhebt, wird sofort auf die Oberfläche zurückgezogen –
+    // mit seiner Rutschbewegung. Fallen (unterhalb der Oberfläche) bleibt erlaubt.
+    if (!isPlayer && !st.canFly && loc.y > st.groundY + 0.01 && loc.y < st.groundY + 1.6) {
+      const below = groundBelow(entity, { x: loc.x, y: st.groundY, z: loc.z }, halfWidth(entity, false));
+      if (below.anyGliss && !below.centerSolid) {
+        const floor = { x: loc.x, y: st.groundY, z: loc.z };
+        if (!tryMove(entity, floor, st.vx, st.vz)) tryMove(entity, floor, 0, 0);
+        return;
+      }
+    }
     // In der Luft (Kante hinunter, Schubs): Der Impuls bleibt erhalten,
     // die Geschwindigkeit wird beim nächsten Bodenkontakt wieder angelegt.
     st.airborne = true;
@@ -512,6 +535,7 @@ function updateEntity(entity, isPlayer) {
     return;
   }
   st.airborne = false;
+  st.groundY = loc.y;
   if (isPlayer) tickSlide(st, d, loc);
   else tickSlideEntity(st, loc);
   updateHud(st);

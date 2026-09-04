@@ -14,15 +14,21 @@ function makeEntity(id, typeId, x, z, vx, vz, half) {
     id, typeId, dimension, location: { x, y: 65, z }, isOnGround: true, isValid: true, vel: { x: vx, z: vz }, tp: 0,
     hasComponent(c) { return typeId !== "minecraft:item" && c === "minecraft:movement"; },
     clearVelocity() {}, applyImpulse() {}, playSound() {},
+    jumps: 0, pulledBack: 0, maxYAfterScript: 65,
     tryTeleport(loc, opts) {
       // Blockprüfung: AABB (halbe Breite half) an Ziel gegen Wandblock
       for (const cx of [loc.x - half, loc.x + half]) if (solidAt(Math.floor(cx), 65, Math.floor(loc.z))) return false;
-      e.location = { x: loc.x, y: loc.y, z: loc.z }; e.tp++;
+      if (e.location.y > 65 && loc.y === 65) e.pulledBack++;
+      e.location = { x: loc.x, y: loc.y, z: loc.z }; e.tp++; e.isOnGround = loc.y <= 65;
       if (!opts || !opts.keepVelocity) { e.vel.x = 0; e.vel.z = 0; }
       return true;
     },
-    physics() { // Vanilla: erste Ticks Bewegung mit Dämpfung 0.91 (Mob) / 0.98 (Item), solange das Skript noch nicht steuert
-      e.location = { x: e.location.x + e.vel.x, y: 65, z: e.location.z + e.vel.z };
+    physics(tick) { // Vanilla: erste Ticks Bewegung mit Dämpfung 0.91 (Mob) / 0.98 (Item), solange das Skript noch nicht steuert
+      let y = e.location.y;
+      if (typeId !== "minecraft:item" && tick % 25 === 0) { y += 0.42; e.jumps++; }       // KI-Sprung
+      else if (y > 65) y = Math.max(65, y - 0.25);                                          // Sprungbogen fällt zurück
+      e.location = { x: e.location.x + e.vel.x, y, z: e.location.z + e.vel.z };
+      e.isOnGround = y <= 65;
       const damp = typeId === "minecraft:item" ? 0.98 : 0.91; e.vel.x *= damp; e.vel.z *= damp;
     },
   };
@@ -41,9 +47,9 @@ const xs = { i1: [], c1: [] };
 for (let i = 0; i < 400; i++) {
   t++;
   const before = Object.fromEntries(ents.map(e => [e.id, e.location.x]));
-  for (const e of ents) e.physics();   // Vanilla-Bewegung (gedämpft), solange das Skript noch nicht steuert
+  for (const e of ents) e.physics(t);  // Vanilla-Bewegung (gedämpft), solange das Skript noch nicht steuert
   system.tick(t);                       // Skript: ab der zweiten Beobachtung Teleport um die Startgeschwindigkeit
-  for (const e of ents) xs[e.id].push(e.location.x - before[e.id]);
+  for (const e of ents) { xs[e.id].push(e.location.x - before[e.id]); e.maxYAfterScript = Math.max(e.maxYAfterScript, e.location.y); }
 }
 const stepsItem = xs.i1.slice(5, 60), stepsCow = xs.c1.slice(5, 60);
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
@@ -51,7 +57,8 @@ console.log(`REST=${REST}`);
 console.log(`  Gegenstand: mittlere Verschiebung/Tick ${mean(stepsItem).toFixed(4)} (Eintritt 0.2·0.98≈0.196), Ende x=${item.location.x.toFixed(2)} (Wand bei ${WALL_X - 0.125}), Teleports=${item.tp}`);
 console.log(`  Kuh: mittlere Verschiebung/Tick ${mean(stepsCow).toFixed(4)} (Eintritt ≈0.091), Ende x=${cow.location.x.toFixed(2)}, z=${cow.location.z.toFixed(2)} (rutscht längs der Wand weiter: z wächst), Teleports=${cow.tp}`);
 const okItem = mean(stepsItem) > 0.15 && Math.abs(item.location.x - (WALL_X - 0.125)) < 0.25;
-const okCow = mean(stepsCow) > 0.07 && Math.abs(cow.location.x - (WALL_X - 0.45)) < 0.25 && cow.location.z > 15;
+console.log(`  Kuh-Sprünge: ${cow.jumps} versucht, ${cow.pulledBack} sofort zurückgezogen, höchste Position nach Skript-Tick y=${cow.maxYAfterScript.toFixed(2)} (Soll 65.00)`);
+const okCow = mean(stepsCow) > 0.07 && Math.abs(cow.location.x - (WALL_X - 0.45)) < 0.25 && cow.location.z > 15 && cow.jumps > 5 && cow.pulledBack === cow.jumps && cow.maxYAfterScript === 65;
 const ok = REST === 0 ? okItem && okCow : item.location.x < WALL_X - 3 && cow.location.x < WALL_X - 3;
 console.log(ok ? "  ERGEBNIS: OK" : "  ERGEBNIS: FEHLER");
 process.exit(ok ? 0 : 1);
