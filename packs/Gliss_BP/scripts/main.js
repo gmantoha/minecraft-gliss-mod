@@ -49,11 +49,10 @@ export const CONFIG = {
     "minecraft:fishing_hook": 0.05,
     "minecraft:wind_charge_projectile": 0.15,
   },
-  RECOIL_MAX_DISTANCE: 2.5,  // Objekt muss so nah am Kopf des Werfers erscheinen
+  RECOIL_MAX_DISTANCE: 4.0,  // Rückfall ohne Besitzer-Info: Objekt muss so nah am Kopf des Werfers erscheinen
   KICK_VERTICAL: 0.2,        // kleiner Hüpfer beim Abstoßen aus dem Stand (sonst kann der Client
                             // einen rein waagerechten Schubs auf einen stehenden Spieler verschlucken)
-  RETRY_GRACE_TICKS: 3,      // kam ein Schubs nicht an (keine Bewegung, kein Block im Weg): nach so
-                            // vielen Ticks erneut anlegen, wieder mit Hüpfer
+  BLOCKED_WINDOW: 4,         // Wand-Erkennung über so viele Ticks (verträgt Messlücken im Netzwerk)
   HIT_IMPULSE: 0.4,          // Impuls durch einen Nahkampfschlag (Blöcke/Tick)
   ENTITIES_SLIDE: true,      // Gegenstände, Tiere und Monster rutschen ebenfalls (endlos)
   ENTITY_SCAN_RADIUS: 48,    // Entities in diesem Umkreis um Spieler werden betrachtet
@@ -68,6 +67,7 @@ export const CONFIG = {
   ENTER_HINT_REPEAT_TICKS: 600, // Eintritts-Hinweis (falls CHAT_HINTS an) höchstens alle 30 s
   LOADED_MESSAGE: true,      // einmalige Meldung „Add-On aktiv“ beim Start
   QUIET_TAG: "gliss_quiet",  // Spieler mit diesem Tag bekommen weder Chat noch HUD (/tag @s add gliss_quiet)
+  DEBUG_TAG: "gliss_debug",  // Spieler mit diesem Tag sehen Rohwerte statt der Tempoanzeige (/tag @s add gliss_debug)
   JUMP_ALLOWED_IN_CREATIVE: false, // true: im Kreativmodus darf man springen/wegfliegen (Doppel-Sprung)
   // Selbstkalibrierung der Knockback-Wirkung (siehe tickSlide):
   MODEL_PRIOR_C: 0.5,        // Startannahme: v' = 0.5·v + F (wie Vanilla-Knockback)
@@ -102,8 +102,8 @@ let announced = false;
  * @property {boolean} isPlayer
  * @property {number} vx  Sollgeschwindigkeit x (Blöcke/Tick)
  * @property {number} vz  Sollgeschwindigkeit z (Blöcke/Tick)
- * @property {number} blockedX
- * @property {number} blockedZ
+ * @property {number[]} recentDX  letzte gemessene Verschiebungen x (Wand-Erkennung)
+ * @property {number[]} recentDZ  letzte gemessene Verschiebungen z
  * @property {number} grace  Ticks, in denen weder gelernt noch auf Wände geprüft wird
  * @property {{x:number,z:number}|null} lastF
  * @property {{x:number,z:number}|null} lastD
@@ -281,8 +281,8 @@ function startSliding(entity, isPlayer, d) {
     isPlayer,
     vx: d.x,
     vz: d.z,
-    blockedX: 0,
-    blockedZ: 0,
+    recentDX: [],
+    recentDZ: [],
     grace: 1,
     lastF: null,
     lastD: null,
@@ -341,12 +341,13 @@ function addImpulse(st, ix, iz) {
   st.vx += ix;
   st.vz += iz;
   capSpeed(st);
-  st.blockedX = 0;
-  st.blockedZ = 0;
+  st.recentDX.length = 0;
+  st.recentDZ.length = 0;
   st.grace = Math.max(st.grace, 4);
   st.forceApply = true;
   if (st.isPlayer && st.measuredSpeed < CONFIG.STUCK_SPEED * 2) st.kick = true; // Abstoßen aus dem Stand
   st.stuckTicks = 0;
+  st.lastEvent = `Impuls ${(Math.hypot(ix, iz) * 20).toFixed(1)} m/s @${tick}`;
 }
 
 /** Steht in Richtung (dx, dz) ein fester Block auf Fuß- oder Kopfhöhe? */
@@ -388,41 +389,41 @@ function tickSlide(st, d, loc) {
     }
   }
 
-  // 2) Wand? Erwartete Strecke vs. tatsächliche Strecke je Achse
+  // 2) Wand? Erwartete Strecke vs. tatsächliche Strecke je Achse, über ein Fenster von
+  //    mehreren Ticks (einzelne Messlücken im Netzwerk zählen so nicht als Wand).
   if (st.grace > 0) {
     st.grace--;
+    st.recentDX.length = 0;
+    st.recentDZ.length = 0;
   } else if (speed > CONFIG.STUCK_SPEED) {
+    st.recentDX.push(d.x);
+    st.recentDZ.push(d.z);
+    if (st.recentDX.length > CONFIG.BLOCKED_WINDOW) st.recentDX.shift();
+    if (st.recentDZ.length > CONFIG.BLOCKED_WINDOW) st.recentDZ.shift();
+    const sum = (arr) => arr.reduce((a, b) => a + Math.abs(b), 0);
+    const full = st.recentDX.length >= CONFIG.BLOCKED_WINDOW;
     const ax = Math.abs(st.vx), az = Math.abs(st.vz);
-    st.blockedX = ax > 0.03 && Math.abs(d.x) < CONFIG.BLOCKED_RATIO * ax ? st.blockedX + 1 : 0;
-    st.blockedZ = az > 0.03 && Math.abs(d.z) < CONFIG.BLOCKED_RATIO * az ? st.blockedZ + 1 : 0;
-    // Nur ein wirklich vorhandener fester Block zählt als Wand. Kommt der Spieler aus
-    // anderen Gründen nicht voran (z. B. verschluckter Schubs aus dem Stand), bleibt die
-    // Sollgeschwindigkeit erhalten und wird weiter angelegt.
-    let bounced = false, retry = false;
-    if (st.blockedX >= CONFIG.BLOCKED_TICKS) {
-      st.blockedX = 0;
+    let bounced = false;
+    // Nur ein wirklich vorhandener fester Block zählt als Wand.
+    if (full && ax > 0.03 && sum(st.recentDX) < CONFIG.BLOCKED_RATIO * ax * CONFIG.BLOCKED_WINDOW) {
+      st.recentDX.length = 0;
       if (solidAhead(st.entity, loc, Math.sign(st.vx) * 0.5, 0)) {
         st.vx = -st.vx * CONFIG.RESTITUTION;
         bounced = true;
-      } else retry = true;
+      }
     }
-    if (st.blockedZ >= CONFIG.BLOCKED_TICKS) {
-      st.blockedZ = 0;
+    if (full && az > 0.03 && sum(st.recentDZ) < CONFIG.BLOCKED_RATIO * az * CONFIG.BLOCKED_WINDOW) {
+      st.recentDZ.length = 0;
       if (solidAhead(st.entity, loc, 0, Math.sign(st.vz) * 0.5)) {
         st.vz = -st.vz * CONFIG.RESTITUTION;
         bounced = true;
-      } else retry = true;
+      }
     }
     if (bounced) {
       st.grace = 4;
       st.forceApply = true;
       sound(st.entity, "random.bowhit", 0.7, 0.8);
-    } else if (retry && st.isPlayer) {
-      // Der Schubs ist nicht angekommen (keine Bewegung, aber auch kein Block im Weg):
-      // erneut anlegen, mit Hüpfer – so oft, bis der Spieler wirklich in Fahrt ist.
-      st.kick = true;
-      st.forceApply = true;
-      st.grace = CONFIG.RETRY_GRACE_TICKS;
+      st.lastEvent = `Wand @${tick}`;
     }
   }
 
@@ -432,7 +433,9 @@ function tickSlide(st, d, loc) {
     const c = st.isPlayer ? modelC : 0;
     const fx = st.vx - c * d.x;
     const fz = st.vz - c * d.z;
-    applyVelocity(st.entity, st.isPlayer, fx, fz, st.kick ? CONFIG.KICK_VERTICAL : 0);
+    const fy = st.kick ? CONFIG.KICK_VERTICAL : 0;
+    applyVelocity(st.entity, st.isPlayer, fx, fz, fy);
+    st.lastApplied = { x: fx, z: fz, y: fy, tick };
     st.kick = false;
     st.lastF = { x: fx, z: fz };
     st.lastD = { x: d.x, z: d.z };
@@ -484,8 +487,30 @@ function tickSlideEntity(st, loc) {
   if (Math.abs(st.vz) > 1e-4 && !tryMove(e, loc2, 0, st.vz)) st.vz = -st.vz * CONFIG.RESTITUTION;
 }
 
+function hasTag(player, tag) {
+  try {
+    return player.hasTag(tag);
+  } catch {
+    return false;
+  }
+}
+
 function updateHud(st) {
-  if (!CONFIG.HUD || !st.isPlayer || tick % CONFIG.HUD_EVERY_TICKS !== 0) return;
+  if (!st.isPlayer || tick % CONFIG.HUD_EVERY_TICKS !== 0) return;
+  if (hasTag(st.entity, CONFIG.DEBUG_TAG)) {
+    const f = (v) => (v >= 0 ? "+" : "") + v.toFixed(3);
+    const a = st.lastApplied;
+    const regime = modelSamples >= CONFIG.MODEL_MIN_SAMPLES && modelC < CONFIG.PER_TICK_MODEL_C ? "jeder Tick" : "alle 4";
+    const text =
+      `§eV=(${f(st.vx)},${f(st.vz)}) §bgemessen=${st.measuredSpeed.toFixed(3)} §7Boden=${!st.airborne}\n` +
+      `§aletzter Schubs=${a ? `(${f(a.x)},${f(a.z)}) y=${a.y.toFixed(2)} vor ${tick - a.tick}t` : "-"} §7c=${modelC.toFixed(2)} (${modelSamples}) ${regime}\n` +
+      `§d${st.lastEvent ?? "-"}`;
+    try {
+      st.entity.onScreenDisplay.setActionBar(text);
+    } catch {}
+    return;
+  }
+  if (!CONFIG.HUD) return;
   if (st.airborne) actionBar(st.entity, "gliss.hud.air", [fmtSpeed(st)]);
   else if (Math.hypot(st.vx, st.vz) <= CONFIG.STUCK_SPEED) actionBar(st.entity, "gliss.hud.stuck");
   else actionBar(st.entity, "gliss.hud", [fmtSpeed(st)]);
@@ -614,16 +639,40 @@ world.afterEvents.entitySpawn.subscribe((ev) => {
     const e = ev.entity;
     const recoil = CONFIG.RECOIL[e.typeId];
     if (!recoil || String(ev.cause) === "Loaded") return;
-    const loc = e.location;
     let best = null;
-    let bestDist = CONFIG.RECOIL_MAX_DISTANCE * CONFIG.RECOIL_MAX_DISTANCE;
-    for (const st of sliders.values()) {
-      if (!st.isPlayer || !isValid(st.entity)) continue;
-      const head = st.entity.getHeadLocation();
-      const dist = (head.x - loc.x) ** 2 + (head.y - loc.y) ** 2 + (head.z - loc.z) ** 2;
-      if (dist < bestDist) {
+    let how = "";
+    // 1) Geschosse kennen ihren Schützen (Projektil-Komponente).
+    try {
+      const proj = e.getComponent("minecraft:projectile");
+      const owner = proj?.owner;
+      if (owner) {
+        const st = sliders.get(owner.id);
+        if (st && st.isPlayer) {
+          best = st;
+          how = "Besitzer";
+        }
+      }
+    } catch {}
+    // 2) Sonst: rutschender Spieler, an dessen Kopf das Objekt erschien. Schnelle Geschosse
+    //    sind beim Ereignis schon unterwegs – der Werfer muss dann hinter dem Objekt stehen.
+    if (!best) {
+      const loc = e.location;
+      let vel = { x: 0, y: 0, z: 0 };
+      try {
+        vel = e.getVelocity();
+      } catch {}
+      const fast = Math.hypot(vel.x, vel.y, vel.z) > 0.5;
+      let bestDist = CONFIG.RECOIL_MAX_DISTANCE * CONFIG.RECOIL_MAX_DISTANCE;
+      for (const st of sliders.values()) {
+        if (!st.isPlayer || !isValid(st.entity)) continue;
+        const head = st.entity.getHeadLocation();
+        const dx = head.x - loc.x, dy = head.y - loc.y, dz = head.z - loc.z;
+        const dist = dx * dx + dy * dy + dz * dz;
+        if (dist >= bestDist) continue;
+        if (fast && dx * vel.x + dy * vel.y + dz * vel.z > 0) continue; // Spieler vor dem Geschoss: nicht der Schütze
         bestDist = dist;
         best = st;
+        how = "Abstand";
       }
     }
     if (!best) return;
@@ -631,6 +680,7 @@ world.afterEvents.entitySpawn.subscribe((ev) => {
     const n = Math.hypot(view.x, view.z);
     if (n < 1e-3) return; // senkrecht geworfen: kein waagerechter Rückstoß
     addImpulse(best, (-view.x / n) * recoil, (-view.z / n) * recoil);
+    best.lastEvent = `${e.typeId.replace("minecraft:", "")} (${how}) +${(recoil * 20).toFixed(1)} m/s @${tick}`;
     sound(best.entity, "random.pop", 0.8, 0.7);
     if (best.stuckTicks > 0 || Math.hypot(best.vx, best.vz) < 0.1) hint(best.entity, "gliss.msg.recoil");
   } catch (err) {

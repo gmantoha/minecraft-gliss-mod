@@ -111,6 +111,10 @@ Nur der Host braucht das Add-On. Beim Beitritt überträgt Minecraft die Pakete 
 - Firewall auf dem Host: Windows-Sicherheit → Firewall → „App durch Firewall zulassen“ → Minecraft für „Privat“ anhaken.
   Notfalls Port **UDP 19132** freigeben.
 - Sieht der Gast den Block ohne Textur (lila-schwarz)? Dann `Gliss.mcaddon` auch auf dem Gast-PC importieren.
+- Verhält sich das Rutschen seltsam? Mit Cheats `/tag @s add gliss_debug` eingeben: Statt der Tempoanzeige
+  erscheinen die Rohwerte des Skripts (Solltempo, gemessenes Tempo, letzter Schubs, letztes Ereignis wie
+  „arrow (Besitzer) +3.2 m/s“). Damit lässt sich sagen, ob z. B. ein Pfeilschuss überhaupt erkannt wurde.
+  `/tag @s remove gliss_debug` schaltet zurück.
 - Läuft das Skript nicht (keine Chat-Meldung „[Gliss] Add-On aktiv“)? In den Einstellungen unter
   **Ersteller → Inhaltsprotokoll-GUI aktivieren** einschalten; Fehler des Skripts werden dann im Spiel angezeigt.
 

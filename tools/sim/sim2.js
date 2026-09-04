@@ -30,16 +30,34 @@ step(80);
 console.log(`MODE=${MODE}`);
 console.log(`  nach 80 Ticks still: Geschwindigkeit ${speed().toFixed(4)}, Bewegung gesperrt=${!p.perms[4]}, Hinweis 'stuck' gesendet=${p.msgs.some(m => m.includes("gliss.msg.stuck"))}`);
 // Wurf: Item erscheint am Kopf (aus dem Stand → erster Schubs mit Hüpfer)
-world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:item", location: p.getHeadLocation() } });
+world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:item", location: p.getHeadLocation(), getVelocity() { return { x: 0.2, y: 0.1, z: 0.2 }; }, getComponent() { return undefined; } } });
 step(20);
 const dirOk = p.vel.x < 0 && p.vel.z < 0; // entgegen Blickrichtung (+x,+z)
 const kicked = p.kicks.some(v => v > 0);
 const kickCount = p.kicks.filter(v => v > 0).length;
 console.log(`  nach Wurf: v=(${p.vel.x.toFixed(4)}, ${p.vel.z.toFixed(4)}) |v|=${speed().toFixed(4)} (Soll ${CONFIG.RECOIL["minecraft:item"]}), Richtung entgegen Blick=${dirOk}, Hüpfer=${kicked} (${kickCount}×), verschluckte Schübe=${process.env.SWALLOW || 0}${p.swallowAll ? " inkl. Hüpfer" : ""}`);
-// Pfeil geschossen
-world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: p.getHeadLocation() } });
+// Pfeil geschossen: voll gespannt, beim Ereignis schon 3 Blöcke voraus – Zuordnung über den Besitzer
+const head = p.getHeadLocation();
+world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: { x: head.x + 2.1, y: head.y, z: head.z + 2.1 },
+  getVelocity() { return { x: 2.1, y: 0, z: 2.1 }; }, getComponent(id) { return id === "minecraft:projectile" ? { owner: p } : undefined; } } });
 step(20);
-console.log(`  nach Pfeil: |v|=${speed().toFixed(4)} (Soll ${(CONFIG.RECOIL["minecraft:item"] + CONFIG.RECOIL["minecraft:arrow"]).toFixed(2)})`);
+console.log(`  nach Pfeil (Besitzer): |v|=${speed().toFixed(4)} (Soll ${(CONFIG.RECOIL["minecraft:item"] + CONFIG.RECOIL["minecraft:arrow"]).toFixed(2)})`);
+// Pfeil ohne Besitzer-Info, schnell und schon 3 Blöcke voraus: Zuordnung über Abstand + Flugrichtung
+const before1 = speed();
+const head2 = p.getHeadLocation();
+world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: { x: head2.x + 2.1, y: head2.y, z: head2.z + 2.1 },
+  getVelocity() { return { x: 2.1, y: 0, z: 2.1 }; }, getComponent() { return undefined; } } });
+step(20);
+const arrowNoOwnerOk = speed() > before1 + 0.1;
+console.log(`  Pfeil ohne Besitzer, 3 Blöcke voraus: Rückstoß erkannt=${arrowNoOwnerOk}`);
+// Pfeil eines anderen Schützen, der VOR dem Spieler fliegt (Spieler ist nicht der Schütze): kein Rückstoß
+const before2 = speed();
+const head3 = p.getHeadLocation();
+world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: { x: head3.x - 2.1, y: head3.y, z: head3.z - 2.1 },
+  getVelocity() { return { x: 2.1, y: 0, z: 2.1 }; }, getComponent() { return undefined; } } });
+step(5);
+const foreignIgnored = Math.abs(speed() - before2) < 1e-9;
+console.log(`  fremder Pfeil von hinten: ignoriert=${foreignIgnored}`);
 // Schlag von einem Angreifer, der westlich steht → Impuls nach +x
 const attacker = { id: "a", location: { x: p.location.x - 1, y: 65, z: p.location.z }, isValid: true };
 world.afterEvents.entityHurt.emit({ hurtEntity: p, damage: 1, damageSource: { cause: "entityAttack", damagingEntity: attacker } });
@@ -47,7 +65,7 @@ step(20);
 console.log(`  nach Schlag: v=(${p.vel.x.toFixed(4)}, ${p.vel.z.toFixed(4)})  (x sollte um +${CONFIG.HIT_IMPULSE} größer sein)`);
 // Weit entferntes Item darf keinen Rückstoß geben
 const before = speed();
-world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:item", location: { x: p.location.x + 5, y: 66, z: p.location.z } } });
+world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:item", location: { x: p.location.x + 5, y: 66, z: p.location.z }, getVelocity() { return { x: 0, y: 0, z: 0 }; }, getComponent() { return undefined; } } });
 step(5);
 console.log(`  fernes Item: |v| vorher ${before.toFixed(4)} nachher ${speed().toFixed(4)} (muss gleich sein)`);
 const speedBeforeWeb = speed();
@@ -62,6 +80,6 @@ console.log(`  Spinnennetz: vorher |v|=${speedBeforeWeb.toFixed(4)}, danach Steu
 webAt = null;
 step(5);
 console.log(`  Netz entfernt: rutscht wieder (gesperrt)=${!p.perms[4]}, |v|=${speed().toFixed(4)} (0 = festgefahren)`);
-const ok = !p.perms[4] && dirOk && kicked && webStopped && stillInWeb && speed() < 1e-6 && Math.abs(speedBeforeWeb - Math.hypot(0.06 * 0.7071 + 0.16 * 0.7071 - 0.4, (0.06 + 0.16) * 0.7071)) < 0.02;
+const ok = !p.perms[4] && dirOk && kicked && arrowNoOwnerOk && foreignIgnored && webStopped && stillInWeb && speed() < 1e-6 && Math.abs(speedBeforeWeb - Math.hypot((0.06 + 0.16 + 0.16) * 0.7071 - 0.4, (0.06 + 0.16 + 0.16) * 0.7071)) < 0.02;
 console.log(ok ? "  ERGEBNIS: OK" : "  ERGEBNIS: FEHLER");
 process.exit(ok ? 0 : 1);
