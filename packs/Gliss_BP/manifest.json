@@ -1,0 +1,39 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "pack.name",
+    "description": "pack.description",
+    "uuid": "1c39703c-1613-4d4d-af6b-3b3b94d8b7ff",
+    "version": [1, 4, 0],
+    "min_engine_version": [1, 21, 90]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "d082d52e-5d40-4219-931a-d6cd0eb99461",
+      "version": [1, 4, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "c9e9aea8-97af-407d-91c5-cf852db06c38",
+      "version": [1, 4, 0],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.0.0"
+    },
+    {
+      "uuid": "3d7cb0bb-5b4b-4b05-862d-f2dd1c52045c",
+      "version": [1, 4, 0]
+    }
+  ],
+  "metadata": {
+    "authors": ["gmantoha"],
+    "license": "MIT",
+    "generated_with": { "claude-code": ["1.0.0"] }
+  }
+}

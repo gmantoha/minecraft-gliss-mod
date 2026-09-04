@@ -1,0 +1,7 @@
+# Kopie des Skripts, die tools/run-sim.sh vor jedem Lauf anlegt
+tools/sim/main.js
+# Einzelpakete (Gliss.mcaddon enthält beide)
+dist/Gliss_BP.mcpack
+dist/Gliss_RP.mcpack
+.DS_Store
+Thumbs.db

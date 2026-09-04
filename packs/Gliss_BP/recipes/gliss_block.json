@@ -1,0 +1,26 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "gliss:gliss_block"
+    },
+    "tags": ["crafting_table"],
+    "pattern": [
+      "III",
+      "ISI",
+      "III"
+    ],
+    "key": {
+      "I": { "item": "minecraft:ice" },
+      "S": { "item": "minecraft:slime_ball" }
+    },
+    "unlock": [
+      { "item": "minecraft:ice" },
+      { "item": "minecraft:slime_ball" }
+    ],
+    "result": {
+      "item": "gliss:gliss_block",
+      "count": 8
+    }
+  }
+}
