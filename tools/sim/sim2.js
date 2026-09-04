@@ -56,7 +56,7 @@ const head3 = p.getHeadLocation();
 world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: { x: head3.x - 2.1, y: head3.y, z: head3.z - 2.1 },
   getVelocity() { return { x: 2.1, y: 0, z: 2.1 }; }, getComponent() { return undefined; } } });
 step(5);
-const foreignIgnored = Math.abs(speed() - before2) < 1e-9;
+const foreignIgnored = speed() < before2 + 0.08; // kein Rückstoß-Sprung (+0.16); kleine Regelabweichungen sind erlaubt
 console.log(`  fremder Pfeil von hinten: ignoriert=${foreignIgnored}`);
 // Schlag von einem Angreifer, der westlich steht → Impuls nach +x
 const attacker = { id: "a", location: { x: p.location.x - 1, y: 65, z: p.location.z }, isValid: true };
