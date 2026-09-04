@@ -13,6 +13,8 @@ echo "=== Szenario B: festgefahren, Wurf, Pfeil, Schlag, Spinnennetz ==="
 for mode in set half add; do node sim2.js "$mode" || fail=1; done
 echo "=== Szenario B mit 3 verschluckten Schüben aus dem Stand ==="
 for mode in set half add; do SWALLOW=3 node sim2.js "$mode" || fail=1; done
+echo "=== Szenario D: über die Kante fallen ==="
+for mode in set half add; do node sim4.js "$mode" || fail=1; done
 echo "=== Szenario C: Gegenstand und Kuh (Teleport), Wand ==="
 REST=0 node sim3.js || fail=1
 REST=0.75 node sim3.js || fail=1

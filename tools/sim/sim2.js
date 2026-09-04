@@ -6,7 +6,7 @@ let webAt = null; // {x, z} eines Spinnennetzes auf Höhe 65
 const dimension = {
   getBlock(p) {
     if (webAt && p.y === 65 && p.x === webAt.x && p.z === webAt.z) return { typeId: "minecraft:web" };
-    return { typeId: p.y === 64 ? CONFIG.BLOCK_ID : "minecraft:air" };
+    const ty = p.y === 64 ? CONFIG.BLOCK_ID : "minecraft:air"; return { typeId: ty, isAir: ty === "minecraft:air", isSolid: ty !== "minecraft:air" };
   },
   getEntities() { return []; }, playSound() {},
 };

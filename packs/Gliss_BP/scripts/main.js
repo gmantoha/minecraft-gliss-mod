@@ -137,18 +137,39 @@ function capSpeed(st) {
   }
 }
 
-/** Steht die Entity (mit ihrem Mittelpunkt) auf einem Gliss-Block? */
-function isGlissBelow(entity, loc) {
+/** Halbe Breite der Hitbox – so weit ragt eine Entity über ihren Mittelpunkt hinaus. */
+function halfWidth(entity, isPlayer) {
+  if (isPlayer) return 0.3;
+  return entity.typeId === "minecraft:item" ? 0.125 : 0.45;
+}
+
+/**
+ * Steht die Entity auf einem Gliss-Block? Geprüft werden Mittelpunkt und die vier
+ * Ecken der Hitbox: Minecraft lässt eine Figur so lange auf einem Block stehen, wie
+ * irgendein Teil ihrer Hitbox darüber ist. Würde nur die Mitte zählen, bliebe man mit
+ * der Mitte über dem Abgrund an der Kante hängen, statt hinunterzufallen.
+ */
+function groundBelow(entity, loc, h) {
+  const g = { centerGliss: false, centerSolid: false, anyGliss: false, anySolid: false };
   try {
-    const block = entity.dimension.getBlock({
-      x: Math.floor(loc.x),
-      y: Math.floor(loc.y - 0.2),
-      z: Math.floor(loc.z),
+    const dim = entity.dimension;
+    const y = Math.floor(loc.y - 0.2);
+    const points = [[loc.x, loc.z]];
+    if (h) points.push([loc.x - h, loc.z - h], [loc.x + h, loc.z - h], [loc.x - h, loc.z + h], [loc.x + h, loc.z + h]);
+    points.forEach(([x, z], i) => {
+      const b = dim.getBlock({ x: Math.floor(x), y, z: Math.floor(z) });
+      if (!b) return;
+      const gliss = b.typeId === CONFIG.BLOCK_ID;
+      const solid = !gliss && (b.isSolid || (!b.isAir && !b.isLiquid));
+      if (i === 0) {
+        g.centerGliss = gliss;
+        g.centerSolid = solid;
+      }
+      if (gliss) g.anyGliss = true;
+      if (solid) g.anySolid = true;
     });
-    return !!block && block.typeId === CONFIG.BLOCK_ID;
-  } catch {
-    return false;
-  }
+  } catch {}
+  return g;
 }
 
 /** Steckt die Entity (Füße oder Kopf) in einem Spinnennetz? */
@@ -459,11 +480,18 @@ function updateEntity(entity, isPlayer) {
   // erst ab der zweiten Beobachtung darf das Rutschen beginnen.
   if (!prev && !sliders.has(entity.id)) return;
 
-  const onGliss = isGlissBelow(entity, loc);
-  const grounded = entity.isOnGround;
+  const g = groundBelow(entity, loc, halfWidth(entity, isPlayer));
+  let st = sliders.get(entity.id);
+  // Einstieg erst, wenn die Körpermitte auf Gliss ist (dort gilt die Gliss-Reibung).
+  // Kante: Mitte schon über Luft, aber eine Ecke der Hitbox noch auf Gliss – Minecraft
+  // lässt die Figur dann noch stehen, rechnet aber mit normaler Reibung. Deshalb wird
+  // weitergeschoben, bis nichts mehr trägt und die Figur wirklich fällt.
+  const onGliss = g.centerGliss || (!!st && !g.centerSolid && g.anyGliss);
+  // „Am Boden“ kann der Position um einen Tick hinterherhinken: über reiner Luft
+  // gilt die Figur als fallend, auch wenn die Meldung noch „am Boden“ sagt.
+  const grounded = entity.isOnGround && (g.anyGliss || g.anySolid);
   const canSlide = isPlayer ? playerCanSlide(entity) : true;
   const inWeb = isInWeb(entity, loc);
-  let st = sliders.get(entity.id);
 
   if (!st) {
     if (onGliss && grounded && canSlide && !inWeb) startSliding(entity, isPlayer, d);

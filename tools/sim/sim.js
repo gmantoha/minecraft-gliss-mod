@@ -17,7 +17,7 @@ const dimension = {
     if (p.y === GLISS.y && p.x >= GLISS.x0 && p.x < GLISS.x1 && p.z >= GLISS.z0 && p.z < GLISS.z1) return { typeId: CONFIG.BLOCK_ID, isSolid: true };
     if (p.y === GLISS.y) return { typeId: "minecraft:stone", isSolid: true };
     if (p.x === WALL_X && (p.y === 65 || p.y === 66)) return { typeId: "minecraft:stone", isSolid: true };
-    return { typeId: "minecraft:air", isSolid: false };
+    return { typeId: "minecraft:air", isSolid: false, isAir: true };
   },
   getEntities() { return []; },
   playSound() {},

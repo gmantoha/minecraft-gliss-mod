@@ -87,7 +87,10 @@ Minecraft die Steuerung nie ganz abgibt.
 
 **Skript** (`packs/Gliss_BP/scripts/main.js`, stabile Skript-API `@minecraft/server` 2.0.0, keine Experimente):
 
-1. Jeden Tick wird für jeden Spieler geprüft, ob der Block unter der Figur Gliss ist und sie am Boden steht.
+1. Jeden Tick wird für jeden Spieler geprüft, ob der Block unter der Körpermitte Gliss ist und sie am Boden
+   steht. An einer Kante (Mitte schon über Luft, eine Ecke der Hitbox noch auf Gliss) wird weitergeschoben,
+   bis nichts mehr trägt – sonst bliebe man mit der Mitte über dem Abgrund hängen, weil Minecraft dort
+   wieder mit normaler Reibung rechnet.
 2. Beim Betreten wird die Geschwindigkeit aus der Positionsänderung des letzten Ticks übernommen,
    die seitliche Bewegung (und außerhalb des Kreativmodus das Springen) per `inputPermissions` gesperrt.
 3. Jeden Tick am Boden wird die Sollgeschwindigkeit per `applyKnockback` angelegt – der einzige Weg,
