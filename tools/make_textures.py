@@ -129,7 +129,21 @@ def make_laser(path):
     write_png(path, 16, 16, rows)
 
 
+def make_dot(path, size=8):
+    rows = []
+    c = (size - 1) / 2
+    for v in range(size):
+        row = []
+        for u in range(size):
+            d = ((u - c) ** 2 + (v - c) ** 2) ** 0.5 / (size / 2)
+            a = max(0.0, min(1.0, 1.15 - d * 1.3))
+            row.append((255, 255, 255, int(round(a * 255))))
+        rows.append(row)
+    write_png(path, size, size, rows)
+
+
 if __name__ == "__main__":
+    make_dot(os.path.join(ROOT, "packs", "Gliss_RP", "textures", "particle", "laser_dot.png"))
     make_laser(os.path.join(ROOT, "packs", "Gliss_RP", "textures", "items", "gliss_laser.png"))
     make_block(os.path.join(ROOT, "packs", "Gliss_RP", "textures", "blocks", "gliss_block.png"))
     make_icon(os.path.join(ROOT, "packs", "Gliss_RP", "pack_icon.png"))

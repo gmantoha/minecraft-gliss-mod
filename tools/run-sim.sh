@@ -18,4 +18,6 @@ for mode in set half add; do node sim4.js "$mode" || fail=1; done
 echo "=== Szenario C: Gegenstand und Kuh (Teleport), Wand ==="
 REST=0 node sim3.js || fail=1
 REST=0.75 node sim3.js || fail=1
+echo "=== Szenario E: Gliss-Laser ==="
+node sim5.js || fail=1
 [ $fail -eq 0 ] && echo "ALLE SIMULATIONEN OK" || { echo "MINDESTENS EINE SIMULATION FEHLGESCHLAGEN"; exit 1; }

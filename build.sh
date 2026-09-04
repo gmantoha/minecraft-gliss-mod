@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 python3 tools/make_textures.py
 for f in packs/Gliss_BP/manifest.json packs/Gliss_BP/blocks/gliss_block.json packs/Gliss_BP/recipes/gliss_block.json packs/Gliss_BP/recipes/laser.json packs/Gliss_BP/items/laser.json \
-         packs/Gliss_RP/manifest.json packs/Gliss_RP/blocks.json packs/Gliss_RP/textures/terrain_texture.json packs/Gliss_RP/textures/item_texture.json \
+         packs/Gliss_RP/manifest.json packs/Gliss_RP/blocks.json packs/Gliss_RP/textures/terrain_texture.json packs/Gliss_RP/textures/item_texture.json packs/Gliss_RP/particles/laser_dot.json \
          packs/Gliss_BP/texts/languages.json packs/Gliss_RP/texts/languages.json; do
   python3 -m json.tool "$f" > /dev/null || { echo "Ungültiges JSON: $f"; exit 1; }
 done

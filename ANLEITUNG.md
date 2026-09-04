@@ -48,7 +48,10 @@ Eine bestehende Welt: im Weltenmenü auf den **Stift** (Bearbeiten) und die Pake
 
 **Gliss wieder entfernen.** Wie im Roman lässt sich Gliss weder sprengen noch mit normalem Werkzeug
 bearbeiten: TNT, Creeper und Feuerbälle richten nichts aus, von Hand oder mit Spitzhacke dauert ein Block
-25 Minuten. Das einzige Werkzeug ist der **Gliss-Laser** (ein Block in etwa 3 Sekunden, 512 Einsätze):
+25 Minuten. Das einzige Werkzeug ist der **Gliss-Laser**: Laser in die Hand nehmen, **rechte Maustaste
+gedrückt halten** und auf einen Gliss-Block zielen. Ein roter Strahl zeigt hin, nach 2 Sekunden ist der
+Block zerlegt und fällt als Gegenstand herunter. Reichweite 12 Blöcke, 512 Blöcke pro Laser. Kein
+Schlagen und kein Abbauen nötig, der Laser wird gehalten wie ein gespannter Bogen:
 
 ```
 [ ] [Glas]           [Diamant]

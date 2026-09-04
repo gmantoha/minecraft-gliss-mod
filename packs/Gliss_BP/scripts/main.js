@@ -22,7 +22,7 @@
  * der Spieler exakt konstant, schaltet ihre Bewegungseingaben ab und
  * simuliert Rückstoß und Abprallen.
  */
-import { world, system, InputPermissionCategory, GameMode } from "@minecraft/server";
+import { world, system, InputPermissionCategory, GameMode, ItemStack, EquipmentSlot } from "@minecraft/server";
 
 // ---------------------------------------------------------------- Einstellungen
 export const CONFIG = {
@@ -67,7 +67,14 @@ export const CONFIG = {
   ENTER_HINT_REPEAT_TICKS: 600, // Eintritts-Hinweis (falls CHAT_HINTS an) höchstens alle 30 s
   LOADED_MESSAGE: true,      // einmalige Meldung „Add-On aktiv“ beim Start
   QUIET_TAG: "gliss_quiet",  // Spieler mit diesem Tag bekommen weder Chat noch HUD (/tag @s add gliss_quiet)
-  DEBUG_TAG: "gliss_debug",  // Spieler mit diesem Tag sehen Rohwerte statt der Tempoanzeige (/tag @s add gliss_debug)
+  DEBUG_TAG: "gliss_debug",
+  // Gliss-Laser (Rechtsklick halten, auf Gliss zielen) ---------------------
+  LASER_ID: "gliss:laser",
+  LASER_RANGE: 12,           // Reichweite des Strahls in Blöcken
+  LASER_CUT_TICKS: 40,       // so lange muss der Strahl auf demselben Block liegen (40 = 2 s)
+  LASER_WEAR_PER_BLOCK: 1,   // Haltbarkeitsverbrauch je zerlegtem Block
+  LASER_DOT_SPACING: 0.4,    // Abstand der Strahl-Punkte
+  LASER_PARTICLE: "gliss:laser_dot",  // Spieler mit diesem Tag sehen Rohwerte statt der Tempoanzeige (/tag @s add gliss_debug)
   JUMP_ALLOWED_IN_CREATIVE: false, // true: im Kreativmodus darf man springen/wegfliegen (Doppel-Sprung)
   // Selbstkalibrierung der Knockback-Wirkung (siehe tickSlide):
   MODEL_PRIOR_C: 0.5,        // Startannahme: v' = 0.5·v + F (wie Vanilla-Knockback)
@@ -731,6 +738,128 @@ world.afterEvents.entityHurt.subscribe((ev) => {
   } catch {}
 });
 
+
+// ---------------------------------------------------------------- Gliss-Laser
+/** @type {Map<string, {player: import("@minecraft/server").Player, targetKey: string|null, progress: number, cuts: number, lastSound: number}>} */
+const lasers = new Map();
+
+function laserStart(player) {
+  lasers.set(player.id, { player, targetKey: null, progress: 0, cuts: 0, lastSound: -1000 });
+}
+
+function laserStop(player) {
+  const L = lasers.get(player.id);
+  if (!L) return;
+  lasers.delete(player.id);
+  laserWear(player, L.cuts);
+}
+
+/** Haltbarkeit erst beim Loslassen abziehen – ein Tausch des Gegenstands würde das Halten unterbrechen. */
+function laserWear(player, cuts) {
+  if (cuts <= 0) return;
+  try {
+    const eq = player.getComponent("minecraft:equippable");
+    const item = eq?.getEquipment(EquipmentSlot.Mainhand);
+    if (!item || item.typeId !== CONFIG.LASER_ID) return;
+    const dur = item.getComponent("minecraft:durability");
+    if (!dur) return;
+    dur.damage = Math.min(dur.maxDurability, dur.damage + cuts * CONFIG.LASER_WEAR_PER_BLOCK);
+    if (dur.damage >= dur.maxDurability) {
+      eq.setEquipment(EquipmentSlot.Mainhand, undefined);
+      sound(player, "random.break", 1, 0.8);
+    } else {
+      eq.setEquipment(EquipmentSlot.Mainhand, item);
+    }
+  } catch (err) {
+    if (CONFIG.DEBUG) console.warn("[Gliss] laser wear: " + err);
+  }
+}
+
+function laserTick(L) {
+  const p = L.player;
+  if (!isValid(p)) return lasers.delete(p.id);
+  const dim = p.dimension;
+  const head = p.getHeadLocation();
+  const view = p.getViewDirection();
+  let hit;
+  try {
+    hit = p.getBlockFromViewDirection({ maxDistance: CONFIG.LASER_RANGE, includeLiquidBlocks: false, includePassableBlocks: false });
+  } catch {}
+  // Strahl: vom Kopf (leicht versetzt, damit er in der Ich-Perspektive sichtbar ist) bis zum Auftreffpunkt
+  const start = { x: head.x + view.x * 0.6, y: head.y - 0.12 + view.y * 0.6, z: head.z + view.z * 0.6 };
+  let end;
+  if (hit) end = { x: hit.block.x + hit.faceLocation.x, y: hit.block.y + hit.faceLocation.y, z: hit.block.z + hit.faceLocation.z };
+  else end = { x: head.x + view.x * CONFIG.LASER_RANGE, y: head.y + view.y * CONFIG.LASER_RANGE, z: head.z + view.z * CONFIG.LASER_RANGE };
+  if (tick % 2 === 0) {
+    const len = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z);
+    const n = Math.max(1, Math.floor(len / CONFIG.LASER_DOT_SPACING));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      try {
+        dim.spawnParticle(CONFIG.LASER_PARTICLE, { x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t, z: start.z + (end.z - start.z) * t });
+      } catch {
+        break;
+      }
+    }
+  }
+  if (tick - L.lastSound >= 50) {
+    L.lastSound = tick;
+    try {
+      dim.playSound("mob.guardian.attack", head, { volume: 0.35, pitch: 1.4 });
+    } catch {}
+  }
+  // Zerlegen: Fortschritt nur, solange der Strahl auf demselben Gliss-Block liegt
+  if (hit && hit.block.typeId === CONFIG.BLOCK_ID) {
+    const b = hit.block;
+    const key = `${b.x},${b.y},${b.z}`;
+    if (key !== L.targetKey) {
+      L.targetKey = key;
+      L.progress = 0;
+    }
+    L.progress++;
+    if (L.progress % 5 === 0) {
+      try {
+        dim.spawnParticle("minecraft:basic_smoke_particle", end);
+      } catch {}
+    }
+    if (L.progress >= CONFIG.LASER_CUT_TICKS) {
+      L.progress = 0;
+      L.targetKey = null;
+      L.cuts++;
+      try {
+        const center = b.center();
+        b.setType("minecraft:air");
+        dim.spawnItem(new ItemStack(CONFIG.BLOCK_ID, 1), center);
+        dim.playSound("random.glass", center, { volume: 0.8, pitch: 1.2 });
+        dim.playSound("random.fizz", center, { volume: 0.6, pitch: 1.5 });
+      } catch (err) {
+        if (CONFIG.DEBUG) console.warn("[Gliss] laser cut: " + err);
+      }
+    }
+    actionBar(p, "gliss.hud.laser", [`${Math.round((L.progress / CONFIG.LASER_CUT_TICKS) * 100)} %`]);
+  } else {
+    L.targetKey = null;
+    L.progress = 0;
+    if (tick % 4 === 0) actionBar(p, "gliss.hud.laser_idle", [String(CONFIG.LASER_RANGE)]);
+  }
+}
+
+world.afterEvents.itemStartUse.subscribe((ev) => {
+  try {
+    if (ev.itemStack?.typeId === CONFIG.LASER_ID) laserStart(ev.source);
+  } catch {}
+});
+world.afterEvents.itemStopUse.subscribe((ev) => {
+  try {
+    laserStop(ev.source);
+  } catch {}
+});
+world.afterEvents.itemReleaseUse.subscribe((ev) => {
+  try {
+    laserStop(ev.source);
+  } catch {}
+});
+
 world.afterEvents.playerSpawn.subscribe((ev) => {
   const st = sliders.get(ev.player.id);
   if (st) sliders.delete(ev.player.id);
@@ -739,6 +868,7 @@ world.afterEvents.playerSpawn.subscribe((ev) => {
 });
 
 world.afterEvents.playerLeave.subscribe((ev) => {
+  lasers.delete(ev.playerId);
   sliders.delete(ev.playerId);
   lastPos.delete(ev.playerId);
   lastEnterMsg.delete(ev.playerId);
@@ -776,6 +906,13 @@ system.runInterval(() => {
     }
   }
   if (CONFIG.ENTITIES_SLIDE) updateEntities();
+  for (const L of lasers.values()) {
+    try {
+      laserTick(L);
+    } catch (err) {
+      if (CONFIG.DEBUG) console.warn("[Gliss] laser: " + err);
+    }
+  }
   if (tick % 100 === 0) {
     cleanup();
     try {

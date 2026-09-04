@@ -21,16 +21,16 @@
       "minecraft:durability": {
         "max_durability": 512
       },
-      "minecraft:damage": 2,
-      "minecraft:digger": {
-        "use_efficiency": false,
-        "destroy_speeds": [
-          {
-            "block": "gliss:gliss_block",
-            "speed": 500
-          }
-        ]
-      }
+      "minecraft:food": {
+        "nutrition": 0,
+        "saturation_modifier": "poor",
+        "can_always_eat": true
+      },
+      "minecraft:use_modifiers": {
+        "use_duration": 1000000,
+        "movement_modifier": 0.35
+      },
+      "minecraft:use_animation": "bow"
     }
   }
 }
