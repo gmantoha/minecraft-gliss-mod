@@ -18,8 +18,8 @@ const p = {
   onScreenDisplay: { setActionBar(t) { p.bars.push(JSON.stringify(t)); } },
   sendMessage(m) { p.msgs.push(JSON.stringify(m)); }, playSound() {}, getGameMode() { return "Survival"; }, hasComponent() { return false; },
   getHeadLocation() { return { x: p.location.x, y: p.location.y + 1.62, z: p.location.z }; }, getViewDirection() { return p.view; },
-  swallow: parseInt(process.env.SWALLOW || "0"), kicks: [],
-  applyKnockback(f, vy) { p.kicks.push(vy); if (p.swallow > 0 && Math.hypot(p.vel.x, p.vel.z) < 1e-6 && vy === 0) { p.swallow--; return; } if (MODE === "set") { p.vel.x = f.x; p.vel.z = f.z; } else if (MODE === "half") { p.vel.x = 0.5 * p.vel.x + f.x; p.vel.z = 0.5 * p.vel.z + f.z; } else { p.vel.x += f.x; p.vel.z += f.z; } },
+  swallow: parseInt(process.env.SWALLOW || "0"), swallowAll: process.env.SWALLOW_ALL === "1", kicks: [],
+  applyKnockback(f, vy) { p.kicks.push(vy); if (p.swallow > 0 && Math.hypot(p.vel.x, p.vel.z) < 1e-6 && (vy === 0 || p.swallowAll)) { p.swallow--; return; } if (MODE === "set") { p.vel.x = f.x; p.vel.z = f.z; } else if (MODE === "half") { p.vel.x = 0.5 * p.vel.x + f.x; p.vel.z = 0.5 * p.vel.z + f.z; } else { p.vel.x += f.x; p.vel.z += f.z; } },
   physics() { if (webAt && Math.floor(p.location.x) === webAt.x && Math.floor(p.location.z) === webAt.z) { p.vel.x = 0; p.vel.z = 0; } p.location = { x: p.location.x + p.vel.x, y: 65, z: p.location.z + p.vel.z }; },
 };
 world.players = [p];
@@ -34,7 +34,8 @@ world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecr
 step(20);
 const dirOk = p.vel.x < 0 && p.vel.z < 0; // entgegen Blickrichtung (+x,+z)
 const kicked = p.kicks.some(v => v > 0);
-console.log(`  nach Wurf: v=(${p.vel.x.toFixed(4)}, ${p.vel.z.toFixed(4)}) |v|=${speed().toFixed(4)} (Soll ${CONFIG.RECOIL["minecraft:item"]}), Richtung entgegen Blick=${dirOk}, Hüpfer=${kicked}, verschluckte Schübe=${process.env.SWALLOW || 0}`);
+const kickCount = p.kicks.filter(v => v > 0).length;
+console.log(`  nach Wurf: v=(${p.vel.x.toFixed(4)}, ${p.vel.z.toFixed(4)}) |v|=${speed().toFixed(4)} (Soll ${CONFIG.RECOIL["minecraft:item"]}), Richtung entgegen Blick=${dirOk}, Hüpfer=${kicked} (${kickCount}×), verschluckte Schübe=${process.env.SWALLOW || 0}${p.swallowAll ? " inkl. Hüpfer" : ""}`);
 // Pfeil geschossen
 world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:arrow", location: p.getHeadLocation() } });
 step(20);

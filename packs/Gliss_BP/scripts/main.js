@@ -50,8 +50,10 @@ export const CONFIG = {
     "minecraft:wind_charge_projectile": 0.15,
   },
   RECOIL_MAX_DISTANCE: 2.5,  // Objekt muss so nah am Kopf des Werfers erscheinen
-  KICK_VERTICAL: 0.16,       // kleiner Hüpfer beim Abstoßen aus dem Stand (sonst kann der Client
+  KICK_VERTICAL: 0.2,        // kleiner Hüpfer beim Abstoßen aus dem Stand (sonst kann der Client
                             // einen rein waagerechten Schubs auf einen stehenden Spieler verschlucken)
+  RETRY_GRACE_TICKS: 3,      // kam ein Schubs nicht an (keine Bewegung, kein Block im Weg): nach so
+                            // vielen Ticks erneut anlegen, wieder mit Hüpfer
   HIT_IMPULSE: 0.4,          // Impuls durch einen Nahkampfschlag (Blöcke/Tick)
   ENTITIES_SLIDE: true,      // Gegenstände, Tiere und Monster rutschen ebenfalls (endlos)
   ENTITY_SCAN_RADIUS: 48,    // Entities in diesem Umkreis um Spieler werden betrachtet
@@ -114,6 +116,7 @@ let announced = false;
  * @property {boolean} forceApply    nächste Korrektur sofort (Eintritt, Abprall, Impuls)
  * @property {boolean} kick          nächste Korrektur mit kleinem Hüpfer (Abstoßen aus dem Stand)
  * @property {number} measuredSpeed  zuletzt gemessene tatsächliche Geschwindigkeit (Blöcke/Tick)
+ * @property {number} displaySpeed   geglättete gemessene Geschwindigkeit für die Anzeige
  * @property {number} groundY        Höhe der Gliss-Oberfläche, auf der die Entity zuletzt stand
  * @property {boolean} canFly        Mob kann fliegen/schweben – darf vom Gliss abheben
  */
@@ -251,9 +254,10 @@ function hint(player, key, args) {
   if (CONFIG.CHAT_HINTS) chat(player, key, args);
 }
 
+/** Anzeige: die tatsächlich gemessene Geschwindigkeit, nicht der Sollwert des Skripts. */
 function fmtSpeed(st) {
-  const ms = Math.hypot(st.vx, st.vz) * 20;
-  return ms.toFixed(1).replace(".", ",");
+  const ms = st.displaySpeed * 20;
+  return (ms < 0.05 ? 0 : ms).toFixed(1).replace(".", ",");
 }
 
 /** Geschwindigkeit wirklich anwenden – für Spieler nur per Knockback möglich. */
@@ -291,6 +295,7 @@ function startSliding(entity, isPlayer, d) {
     forceApply: true,
     kick: false,
     measuredSpeed: Math.hypot(d.x, d.z),
+    displaySpeed: Math.hypot(d.x, d.z),
     groundY: entity.location.y,
     canFly: !isPlayer && FLYING_NAV.some((c) => {
       try {
@@ -393,25 +398,31 @@ function tickSlide(st, d, loc) {
     // Nur ein wirklich vorhandener fester Block zählt als Wand. Kommt der Spieler aus
     // anderen Gründen nicht voran (z. B. verschluckter Schubs aus dem Stand), bleibt die
     // Sollgeschwindigkeit erhalten und wird weiter angelegt.
-    let bounced = false;
+    let bounced = false, retry = false;
     if (st.blockedX >= CONFIG.BLOCKED_TICKS) {
       st.blockedX = 0;
       if (solidAhead(st.entity, loc, Math.sign(st.vx) * 0.5, 0)) {
         st.vx = -st.vx * CONFIG.RESTITUTION;
         bounced = true;
-      }
+      } else retry = true;
     }
     if (st.blockedZ >= CONFIG.BLOCKED_TICKS) {
       st.blockedZ = 0;
       if (solidAhead(st.entity, loc, 0, Math.sign(st.vz) * 0.5)) {
         st.vz = -st.vz * CONFIG.RESTITUTION;
         bounced = true;
-      }
+      } else retry = true;
     }
     if (bounced) {
       st.grace = 4;
       st.forceApply = true;
       sound(st.entity, "random.bowhit", 0.7, 0.8);
+    } else if (retry && st.isPlayer) {
+      // Der Schubs ist nicht angekommen (keine Bewegung, aber auch kein Block im Weg):
+      // erneut anlegen, mit Hüpfer – so oft, bis der Spieler wirklich in Fahrt ist.
+      st.kick = true;
+      st.forceApply = true;
+      st.grace = CONFIG.RETRY_GRACE_TICKS;
     }
   }
 
@@ -510,6 +521,7 @@ function updateEntity(entity, isPlayer) {
     return;
   }
   st.lastSeen = tick;
+  st.displaySpeed += 0.4 * (Math.hypot(d.x, d.z) - st.displaySpeed);
 
   if (inWeb) return stopSliding(st, "web");
   if (!canSlide) return stopSliding(st, "other");
