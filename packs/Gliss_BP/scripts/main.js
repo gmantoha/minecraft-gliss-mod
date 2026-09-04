@@ -74,7 +74,12 @@ export const CONFIG = {
   LASER_CUT_TICKS: 40,       // so lange muss der Strahl auf demselben Block liegen (40 = 2 s)
   LASER_WEAR_PER_BLOCK: 1,   // Haltbarkeitsverbrauch je zerlegtem Block
   LASER_DOT_SPACING: 0.4,    // Abstand der Strahl-Punkte
-  LASER_PARTICLE: "gliss:laser_dot",  // Spieler mit diesem Tag sehen Rohwerte statt der Tempoanzeige (/tag @s add gliss_debug)
+  LASER_PARTICLE: "gliss:laser_dot",
+  // Beine beim Rutschen still halten, solange keine Bewegungstaste gedrückt wird
+  LEGS_ANIMATION: "animation.gliss.slide",
+  LEGS_RELEASE_ANIMATION: "animation.gliss.none",
+  LEGS_CONTROLLER: "gliss_legs",
+  INPUT_THRESHOLD: 0.1,  // Spieler mit diesem Tag sehen Rohwerte statt der Tempoanzeige (/tag @s add gliss_debug)
   JUMP_ALLOWED_IN_CREATIVE: false, // true: im Kreativmodus darf man springen/wegfliegen (Doppel-Sprung)
   // Selbstkalibrierung der Knockback-Wirkung (siehe tickSlide):
   MODEL_PRIOR_C: 0.5,        // Startannahme: v' = 0.5·v + F (wie Vanilla-Knockback)
@@ -124,6 +129,7 @@ let announced = false;
  * @property {boolean} kick          nächste Korrektur mit kleinem Hüpfer (Abstoßen aus dem Stand)
  * @property {number} measuredSpeed  zuletzt gemessene tatsächliche Geschwindigkeit (Blöcke/Tick)
  * @property {number} displaySpeed   geglättete gemessene Geschwindigkeit für die Anzeige
+ * @property {boolean|null} legsFrozen  Spieler: Beine-still-Animation aktiv? (null = noch nichts gesetzt)
  * @property {number} groundY        Höhe der Gliss-Oberfläche, auf der die Entity zuletzt stand
  * @property {{x:number,z:number}|null} anchor  Mobs/Gegenstände: zuletzt gesetzte Position – jeder Tick
  *                                   setzt „Anker + Rutschbewegung“, KI-Schritte dazwischen werden verworfen
@@ -305,6 +311,7 @@ function startSliding(entity, isPlayer, d) {
     kick: false,
     measuredSpeed: Math.hypot(d.x, d.z),
     displaySpeed: Math.hypot(d.x, d.z),
+    legsFrozen: null,
     groundY: entity.location.y,
     anchor: isPlayer ? null : { x: entity.location.x, z: entity.location.z },
     canFly: !isPlayer && FLYING_NAV.some((c) => {
@@ -329,9 +336,38 @@ function startSliding(entity, isPlayer, d) {
   return st;
 }
 
+/** Versucht der Spieler zu laufen (Bewegungstaste/Stick), obwohl das auf Gliss nichts bewirkt? */
+function wantsToWalk(player) {
+  try {
+    const v = player.inputInfo.getMovementVector();
+    return Math.hypot(v.x, v.y) > CONFIG.INPUT_THRESHOLD;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Laufanimation: Minecraft bewegt die Beine nach der tatsächlichen Geschwindigkeit. Beim
+ * Rutschen läuft aber niemand – die Beine werden per Animation still gehalten, außer der
+ * Spieler drückt eine Laufen-Taste (dann strampelt er ins Leere, wie im Roman).
+ */
+function updateLegs(st, frozen) {
+  if (st.legsFrozen === frozen) return;
+  st.legsFrozen = frozen;
+  try {
+    st.entity.playAnimation(frozen ? CONFIG.LEGS_ANIMATION : CONFIG.LEGS_RELEASE_ANIMATION, {
+      controller: CONFIG.LEGS_CONTROLLER,
+      blendOutTime: 0.15,
+    });
+  } catch (err) {
+    if (CONFIG.DEBUG) console.warn("[Gliss] legs: " + err);
+  }
+}
+
 function stopSliding(st, reason) {
   sliders.delete(st.entity.id);
   if (st.isPlayer) {
+    if (st.legsFrozen) updateLegs(st, false);
     setInputs(st.entity, true);
     if (reason === "ground") {
       hint(st.entity, "gliss.msg.exit");
@@ -606,8 +642,12 @@ function updateEntity(entity, isPlayer) {
   }
   st.airborne = false;
   st.groundY = loc.y;
-  if (isPlayer) tickSlide(st, d, loc);
-  else tickSlideEntity(st, loc);
+  if (isPlayer) {
+    tickSlide(st, d, loc);
+    if (tick % 2 === 0) updateLegs(st, !wantsToWalk(entity));
+  } else {
+    tickSlideEntity(st, loc);
+  }
   updateHud(st);
 }
 

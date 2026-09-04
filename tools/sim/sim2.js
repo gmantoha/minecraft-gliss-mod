@@ -13,7 +13,8 @@ const dimension = {
 const p = {
   id: "p1", name: "T", typeId: "minecraft:player", dimension, location: { x: 10.5, y: 65, z: 10.5 }, vel: { x: 0, z: 0 },
   isOnGround: true, isFlying: false, isGliding: false, isInWater: false, isClimbing: false, isValid: true, perms: { 4: true, 6: true },
-  view: { x: 0.7071, y: 0, z: 0.7071 }, msgs: [], bars: [],
+  view: { x: 0.7071, y: 0, z: 0.7071 }, msgs: [], bars: [], anims: [], moveVec: { x: 0, y: 0 },
+  inputInfo: { getMovementVector() { return p.moveVec; } }, playAnimation(name, opts) { p.anims.push(name); },
   inputPermissions: { setPermissionCategory(c, e) { p.perms[c] = e; } },
   onScreenDisplay: { setActionBar(t) { p.bars.push(JSON.stringify(t)); } },
   sendMessage(m) { p.msgs.push(JSON.stringify(m)); }, playSound() {}, getGameMode() { return "Survival"; }, hasComponent() { return false; },
@@ -28,6 +29,12 @@ let t = 0;
 const step = (n) => { for (let i = 0; i < n; i++) { t++; p.physics(); system.tick(t); } };
 step(80);
 console.log(`MODE=${MODE}`);
+const legsStill = p.anims.length === 1 && p.anims[0] === CONFIG.LEGS_ANIMATION;
+p.moveVec = { x: 0, y: 1 }; step(4);
+const legsFreed = p.anims.at(-1) === CONFIG.LEGS_RELEASE_ANIMATION;
+p.moveVec = { x: 0, y: 0 }; step(4);
+const legsStillAgain = p.anims.at(-1) === CONFIG.LEGS_ANIMATION && p.anims.length === 3;
+console.log(`  Beine: still beim Rutschen=${legsStill}, freigegeben bei Tastendruck=${legsFreed}, wieder still ohne Taste=${legsStillAgain}`);
 console.log(`  nach 80 Ticks still: Geschwindigkeit ${speed().toFixed(4)}, Bewegung gesperrt=${!p.perms[4]}, Hinweis 'stuck' gesendet=${p.msgs.some(m => m.includes("gliss.msg.stuck"))}`);
 // Wurf: Item erscheint am Kopf (aus dem Stand → erster Schubs mit Hüpfer)
 world.afterEvents.entitySpawn.emit({ cause: "Spawned", entity: { typeId: "minecraft:item", location: p.getHeadLocation(), getVelocity() { return { x: 0.2, y: 0.1, z: 0.2 }; }, getComponent() { return undefined; } } });
@@ -73,13 +80,14 @@ const speedBeforeWeb = speed();
 webAt = { x: Math.floor(p.location.x), z: Math.floor(p.location.z) };
 step(3);
 const webStopped = p.perms[4] === true;
+const legsReleasedOnExit = p.anims.at(-1) === CONFIG.LEGS_RELEASE_ANIMATION;
 const posInWeb = { ...p.location };
 step(10);
 const stillInWeb = Math.abs(p.location.x - posInWeb.x) < 1e-9 && p.perms[4] === true;
-console.log(`  Spinnennetz: vorher |v|=${speedBeforeWeb.toFixed(4)}, danach Steuerung frei=${webStopped}, bleibt stehen=${stillInWeb}`);
+console.log(`  Spinnennetz: vorher |v|=${speedBeforeWeb.toFixed(4)}, danach Steuerung frei=${webStopped}, bleibt stehen=${stillInWeb}, Beine freigegeben=${legsReleasedOnExit}`);
 webAt = null;
 step(5);
 console.log(`  Netz entfernt: rutscht wieder (gesperrt)=${!p.perms[4]}, |v|=${speed().toFixed(4)} (0 = festgefahren)`);
-const ok = !p.perms[4] && dirOk && kicked && arrowNoOwnerOk && foreignIgnored && webStopped && stillInWeb && speed() < 1e-6 && Math.abs(speedBeforeWeb - Math.hypot((0.06 + 0.16 + 0.16) * 0.7071 - 0.4, (0.06 + 0.16 + 0.16) * 0.7071)) < 0.02;
+const ok = legsStill && legsFreed && legsStillAgain && legsReleasedOnExit && !p.perms[4] && dirOk && kicked && arrowNoOwnerOk && foreignIgnored && webStopped && stillInWeb && speed() < 1e-6 && Math.abs(speedBeforeWeb - Math.hypot((0.06 + 0.16 + 0.16) * 0.7071 - 0.4, (0.06 + 0.16 + 0.16) * 0.7071)) < 0.02;
 console.log(ok ? "  ERGEBNIS: OK" : "  ERGEBNIS: FEHLER");
 process.exit(ok ? 0 : 1);

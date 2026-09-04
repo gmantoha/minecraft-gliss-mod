@@ -95,7 +95,10 @@ Minecraft die Steuerung nie ganz abgibt.
    bis nichts mehr trägt – sonst bliebe man mit der Mitte über dem Abgrund hängen, weil Minecraft dort
    wieder mit normaler Reibung rechnet.
 2. Beim Betreten wird die Geschwindigkeit aus der Positionsänderung des letzten Ticks übernommen,
-   die seitliche Bewegung (und außerhalb des Kreativmodus das Springen) per `inputPermissions` gesperrt.
+   die seitliche Bewegung und das Springen per `inputPermissions` gesperrt. Weil Minecraft die Beine nach
+   der tatsächlichen Geschwindigkeit bewegt, hält eine per `playAnimation` eingespielte Animation
+   (`animation.gliss.slide`, überschreibt nur die Beinknochen) sie still; drückt der Spieler laut
+   `inputInfo.getMovementVector()` eine Laufen-Taste, wird sie freigegeben und er strampelt ins Leere.
 3. Jeden Tick am Boden wird die Sollgeschwindigkeit per `applyKnockback` angelegt – der einzige Weg,
    die Geschwindigkeit eines Spielers vom Server aus zu setzen.
 4. Kommt die Figur trotz Sollgeschwindigkeit nicht voran (zwei Ticks unter 25 % der erwarteten Strecke)

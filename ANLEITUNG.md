@@ -67,7 +67,7 @@ Block ohnehin sofort.
 | Situation | Was passiert |
 |---|---|
 | Du willst Gliss sprengen oder abbauen | Explosionen prallen wirkungslos ab, Werkzeuge greifen nicht. Nur der Gliss-Laser zerlegt den Block (siehe oben). |
-| Du gehst/rennst auf Gliss | Du behältst dein Tempo und rutschst geradeaus weiter. Laufen und Springen sind in jedem Spielmodus gesperrt, die Kamera bleibt frei. Oben im Bildschirm siehst du dein Tempo in m/s. |
+| Du gehst/rennst auf Gliss | Du behältst dein Tempo und rutschst geradeaus weiter. Laufen und Springen sind in jedem Spielmodus gesperrt, die Kamera bleibt frei. Die Beine bleiben still, solange du keine Taste drückst; drückst du eine Laufen-Taste, strampelst du ins Leere. Oben im Bildschirm siehst du dein Tempo in m/s. |
 | Du stehst still auf Gliss (z. B. Block unter dir gesetzt) | Du hängst fest – wie im Roman. Nach 3 s kommt ein Hinweis. |
 | Du wirfst etwas weg (Taste **Q**) oder schießt (Bogen, Schneeball, Dreizack) | **Rückstoß**: Du gleitest in die Gegenrichtung deines Blicks. Mehrfach werfen = schneller. So steuert man auf Gliss. Aus dem Stand macht der Abstoß einen kleinen Hüpfer. |
 | Du wirst geschlagen oder getroffen | Der Schlag überträgt Impuls: Du gleitest vom Angreifer weg. So kann dich ein Mitspieler „anschubsen“. |
